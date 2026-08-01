@@ -17,14 +17,16 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Claude Code 개인/머신별 설정 (절대경로·로컬 권한 포함) — 커밋 안 함
-.claude/settings.local.json
-CLAUDE.local.md
+# 개인 문서
+docs/private/
 
-# 진로/랩실 관련 개인 맥락 문서 — 다른 AI 세션이 참고하도록 로컬에는 유지하되,
-# 공개 레포에는 절대 커밋하지 않음 (개인적인 진로 고민, 랩실 상황, 실무자 피드백 원문 포함)
-docs/context/
+# 개인 학습 기록
+study_notes/
 
-# 리포트 생성물 (재생성 가능, 커밋 불필요)
+# 이론 정리 노트
+theory/
+
+# 리포트 생성물 (재생성 가능)
 reports/*.html
 reports/*.pdf
+reports/*.png

@@ -17,8 +17,16 @@ scenarios/      Disturbance & sensor-fault scenarios, Monte Carlo configs
 tests/          Unit tests
 reports/        Generated V&V reports
 config/         Configuration files
-docs/           Design docs (this repo's docs/context/ is git-ignored — personal notes)
+docs/           Design docs (this repo's docs/private/ is git-ignored — personal notes)
 ```
+
+## Development process
+Each implementation step follows a fixed daily loop: study the underlying theory
+first (keywords, then explanations, kept as private working notes), implement
+that piece by hand, verify it with unit tests, then commit. Commit history is
+structured to reflect this (`feat(day-N)` for the implementation, `test(day-N)`
+for its tests), so the log itself traces the build order: theory understood
+before code, code verified before it's considered done.
 
 ## Design principle: LLM stays out of the verdict
 The verification harness uses an LLM agent only to (1) propose test-scenario
