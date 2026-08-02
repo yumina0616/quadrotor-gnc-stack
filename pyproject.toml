@@ -1,7 +1,7 @@
 [project]
-name = "quadrotor-gnc-portfolio"
+name = "quadrotor-gnc-stack"
 version = "0.1.0"
-description = "Requirements-based automated V&V harness for quadrotor attitude control with physics-informed state estimation"
+description = "Nonlinear 6DOF quadrotor GNC simulation stack with a requirements-based automated V&V harness"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

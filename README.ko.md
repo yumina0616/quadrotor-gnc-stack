@@ -1,4 +1,4 @@
-# Quadrotor GNC Portfolio
+# Quadrotor GNC Simulation & Verification Stack
 
 [🇺🇸 English](README.md) | 🇰🇷 한국어
 
