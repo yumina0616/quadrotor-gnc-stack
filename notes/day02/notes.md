@@ -1,4 +1,4 @@
-# Day 02 — (제목 채우기)
+# Day 02 — 쿼터니언 연산과 쿼터니언 기구학
 
 관련 코드: dynamics/quaternion.py
 
