@@ -46,3 +46,16 @@ def state_derivative(
     d_state[OMEGA] = omega_dot
     return d_state
 
+def rk4_step(
+    state: np.ndarray, thrust: float, torque: np.ndarray, dt: float, params: QuadrotorParams
+) -> np.ndarray:
+    """RK4로 한 스텝(dt) 적분. thrust/torque는 이 스텝 동안 일정하다고 가정."""
+    k1 = state_derivative(state, thrust, torque, params)
+    k2 = state_derivative(state + dt/2 * k1, thrust, torque, params)
+    k3 = state_derivative(state + dt/2 * k2, thrust, torque, params)
+    k4 = state_derivative(state + dt * k3, thrust, torque, params)
+
+    next_state = state + dt/6 * (k1 + 2*k2 + 2*k3 + k4)
+
+    next_state[QUAT] = quat.normalize(next_state[QUAT])  # 재정규화 -> 누적 오차 방지
+    return next_state
