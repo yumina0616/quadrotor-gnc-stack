@@ -67,3 +67,6 @@ def to_euler_zyx(q: np.ndarray) -> np.ndarray:
     yaw   = np.arctan2(2*(w*z + x*y), 1 - 2*(y**2 + z**2))
     
     return np.array([roll, pitch, yaw])
+
+def conjugate(q: np.ndarray) -> np.ndarray:
+    return q * np.array([1, -1, -1, -1])
