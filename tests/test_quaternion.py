@@ -51,3 +51,9 @@ def test_euler_quaternion_roundtrip():
                 atol=1e-9
             )
     
+
+def test_quaternion_conjugate():
+    q_current = q.normalize([0.2, 0.4, -0.3, 0.7])
+    q_conjugate = q.conjugate(q_current)
+
+    assert np.allclose(q.quaternion_multiply(q_current, q_conjugate), np.array([1,0,0,0]))
