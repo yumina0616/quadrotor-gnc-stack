@@ -17,8 +17,9 @@ def make_before_controller():
 
 
 def make_after_controller():
-    """튜닝 후 게인 — pitch kp 0.3→3.0, yaw kp 4.0→5.0/ki 3.4→2.5로 조정."""
-    kp = np.array([2.0, 3.0, 5.0])
+    """튜닝 후 게인 — pitch kp 0.3→3.0, yaw kp 4.0→15.0/ki 3.4→2.5로 조정.
+    (yaw는 처음 5.0까지 올렸지만 3초 내 1° 수렴 기준을 못 넘겨 15.0까지 추가 조정)"""
+    kp = np.array([2.0, 3.0, 15.0])
     ki = np.array([1.2, 2.3, 2.5])
     kd = np.array([0.5, 1.0, 2.2])
     return AttitudeController(kp, ki, kd)

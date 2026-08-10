@@ -7,7 +7,7 @@ from control.pid_attitude import AttitudeController
 params = DEFAULT_PARAMS
 
 def make_controller(integral_limit = 0.5):
-    kp = np.array([2.0, 3.0, 5.0])
+    kp = np.array([2.0, 3.0, 15.0])
     ki = np.array([1.2, 2.3, 2.5])
     kd = np.array([0.5, 1.0, 2.2])
     return AttitudeController(kp, ki, kd, integral_limit=integral_limit)
