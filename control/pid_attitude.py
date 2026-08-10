@@ -32,6 +32,7 @@ class AttitudeController:
     def compute_torque(
         self, q_current: np.ndarray, q_target: np.ndarray, omega: np.ndarray, dt: float
     ) -> np.ndarray:
+        """목표 자세까지 필요한 토크 pid로 계산"""
 
         e = attitude_error(q_current, q_target)
         self._integral += e*dt
