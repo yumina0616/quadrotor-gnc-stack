@@ -61,8 +61,7 @@ pytest
 ```
 
 ## Verification harness (planned)
-Not yet implemented — intended design only. "Deterministic" here just means
-plain code, not an LLM — same input, same output. Loops until a scenario's
+Not yet implemented — intended design only. Loops until a scenario's
 metrics pass:
 
 1. LLM agent proposes candidate test scenarios.
