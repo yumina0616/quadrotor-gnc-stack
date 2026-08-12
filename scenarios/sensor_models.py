@@ -1,0 +1,28 @@
+import numpy as np
+
+class Gyroscope:
+    """ 자이로스코프 측정 모델: 실제 각속도 + bias + 노이즈 가 섞인 측정값.
+
+    노이즈와 bias 랜덤워크는 (x,y,z) 축마다 독립.
+    """
+
+    def __init__(
+        self,
+        noise_std: float,
+        bias_random_walk_std: float,
+        rng: np.random.Generator | None = None,
+    ):
+
+        self.noise_std = noise_std
+        self.bias_random_walk_std = bias_random_walk_std
+        self.bias = np.zeros(3)
+        self.rng = rng if rng is not None else np.random.default_rng()
+
+    def measure(self, true_omega: np.ndarray, dt: float) -> np.ndarray:
+        """true_omega -> mesured_omega"""
+        self.bias += self.rng.normal(0, self.bias_random_walk_std * np.sqrt(dt), size = 3)
+        noise = self.rng.normal(0, self.noise_std, size = 3)
+
+        return true_omega + self.bias + noise
+
+    
