@@ -1,5 +1,9 @@
 import numpy as np
 
+def true_specific_force(thrust: float, params) -> np.ndarray:
+    """body frame에서 본 specific force"""
+    return np.array([0, 0, -thrust/params.mass])
+
 class Gyroscope:
     """ 자이로스코프 측정 모델: 실제 각속도 + bias + 노이즈 가 섞인 측정값.
 
@@ -25,4 +29,24 @@ class Gyroscope:
 
         return true_omega + self.bias + noise
 
-    
+
+class Accelerometer:
+    """가속도계 측정 모델: specific force -> bias+노이즈가 섞이 측정값"""
+
+    def __init__(
+        self,
+        noise_std: float,
+        bias_random_walk_std: float,
+        rng: np.random.Generator | None = None,
+    ):
+        self.noise_std = noise_std
+        self.bias_random_walk_std = bias_random_walk_std
+        self.bias = np.zeros(3)
+        self.rng = rng if rng is not None else np.random.default_rng()
+
+    def measure(self, true_specific_force: np.ndarray, dt: float) -> np.ndarray:
+        self.bias += self.rng.normal(0, self.bias_random_walk_std * np.sqrt(dt), size = 3)
+        noise = self.rng.normal(0, self.noise_std, size = 3)
+
+        return true_specific_force + self.bias + noise
+
