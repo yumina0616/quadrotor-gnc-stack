@@ -19,7 +19,8 @@ def simulate_attitude_stabilization(
     duration: float = 3.0,
     dt: float = 0.01,
     controller=None,
-    use_motor_mixing: bool = False
+    use_motor_mixing: bool = False,
+    gyroscope = None,
 ) -> dict:
     """자세 안정화 폐루프 시뮬레이션.(정지 상태, 자세만 기울어져 있는 초기 조건)
 
@@ -35,8 +36,9 @@ def simulate_attitude_stabilization(
     state_history = []
 
     for i in range(int(duration/dt)):
-        omega = state_current[10:13]
-        torque = ctrl.compute_torque(state_current[6:10], state_target[6:10], omega, dt)
+        true_omega = state_current[10:13]
+        omega_for_control = gyroscope.measure(true_omega, dt) if gyroscope is not None else true_omega
+        torque = ctrl.compute_torque(state_current[6:10], state_target[6:10], omega_for_control, dt)
         thrust = params.mass * params.gravity
 
         if use_motor_mixing:
