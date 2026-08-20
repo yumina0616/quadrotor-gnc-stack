@@ -50,3 +50,22 @@ class Accelerometer:
 
         return true_specific_force + self.bias + noise
 
+class GPS:
+    """GPS 위치 측정 모델: 진짜 위치 -> 노이즈 포함된 측정값, 또는 dropout일 때 None."""
+
+    def __init__(
+        self,
+        noise_std: float,
+        dropout_prob: float,
+        rng: np.random.Generator | None = None,
+    ):
+        self.noise_std = noise_std
+        self.dropout_prob = dropout_prob
+        self.rng = rng if rng is not None else np.random.default_rng()
+
+    def measure(self, true_position: np.ndarray) -> np.ndarray | None:
+        if self.rng.random() < self.dropout_prob:
+            return None
+        noise = self.rng.normal(0, self.noise_std, size=3)
+        return true_position + noise
+        
