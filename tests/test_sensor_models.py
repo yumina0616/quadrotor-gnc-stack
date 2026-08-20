@@ -1,5 +1,5 @@
 import numpy as np
-from scenarios.sensor_models import Gyroscope, Accelerometer, true_specific_force
+from scenarios.sensor_models import Gyroscope, Accelerometer, GPS, true_specific_force
 from config.vehicle_params import DEFAULT_PARAMS as params
 
 def test_measure_reproducible_with_same_seed():
@@ -84,3 +84,34 @@ def test_accelerometer_bias_stays_zero_without_random_walk():
     for _ in range(50):
         a.measure(f_true, dt=0.01)
     assert np.array_equal(a.bias, np.zeros(3))
+
+def test_gps_measure_reproducible_with_same_seed():
+    true_position = np.array([10.0, -5.0, 2.0])
+    g1 = GPS(noise_std=0.5, dropout_prob=0.0, rng=np.random.default_rng(1))
+    g2 = GPS(noise_std=0.5, dropout_prob=0.0, rng=np.random.default_rng(1))
+    for _ in range(10):
+        assert np.array_equal(g1.measure(true_position), g2.measure(true_position))
+
+def test_gps_zero_noise_no_dropout_returns_true_position_exactly():
+    true_position = np.array([1.0, 2.0, 3.0])
+    g = GPS(noise_std=0.0, dropout_prob=0.0, rng=np.random.default_rng(0))
+    for _ in range(20):
+        assert np.array_equal(g.measure(true_position), true_position)
+
+def test_gps_always_dropout_returns_none():
+    true_position = np.array([1.0, 2.0, 3.0])
+    g = GPS(noise_std=0.5, dropout_prob=1.0, rng=np.random.default_rng(2))
+    for _ in range(20):
+        assert g.measure(true_position) is None
+
+def test_gps_dropout_rate_matches_probability():
+    """dropout_prob에 맞는 비율로 실제로 None이 나오는지(경험적 확률) 확인."""
+    true_position = np.array([0.0, 0.0, 0.0])
+    dropout_prob = 0.3
+    n_trials = 2000
+    g = GPS(noise_std=0.1, dropout_prob=dropout_prob, rng=np.random.default_rng(7))
+
+    n_dropped = sum(1 for _ in range(n_trials) if g.measure(true_position) is None)
+    observed_rate = n_dropped / n_trials
+
+    assert np.isclose(observed_rate, dropout_prob, atol=0.05)
