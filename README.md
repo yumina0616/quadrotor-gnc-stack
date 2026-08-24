@@ -8,11 +8,13 @@ state estimation — verified against explicit requirements through an automated
 harness where an LLM agent assists but never decides the verdict.
 
 ## Status
-🏗️ Phase 1 (dynamics + attitude control) complete — 6DOF rigid-body dynamics, PID
-attitude control, and a closed-loop stabilization simulation with documented gain
-tuning, verified by 27 passing unit/integration tests. Motor mixing & actuator
-saturation are in progress next; state estimation and the requirements-based V&V
-harness haven't been started yet (see Planned below).
+🏗️ Phase 1 (dynamics + attitude control, including motor mixing & actuator
+saturation) complete. Phase 2 sensor/disturbance modeling also complete: IMU
+(gyroscope + accelerometer) noise/bias, GPS position dropout, and a simplified
+wind disturbance force, all wired into the closed-loop simulation — verified
+by 55 passing unit/integration tests. State estimation (EKF / physics-informed)
+and the requirements-based V&V harness haven't been started yet (see Planned
+below).
 
 ## What this project does
 
@@ -25,15 +27,23 @@ harness haven't been started yet (see Planned below).
 - **Closed-loop attitude stabilization**: controller and dynamics wired together
   and gain-tuned against a documented overshoot/settling-time diagnosis, checked
   by integration tests (convergence bound, quaternion unit-norm invariant).
+- **Motor mixing & actuator saturation**: desired thrust/torque converted to
+  per-motor commands and clipped to actuator limits, with a documented
+  before/after saturation comparison.
+- **Sensor models**: gyroscope and accelerometer models (white noise + bias
+  random walk) wired into the closed-loop rate feedback, and a GPS position
+  model with configurable dropout probability.
+- **Wind disturbance**: a simplified steady + gust (random-walk) force model
+  injected directly into the rigid-body translational dynamics — not a
+  measurement artifact, it displaces the true trajectory — verified to leave
+  attitude convergence unaffected while causing position drift, matching the
+  model's decoupled rotational/translational equations.
 
 ### Planned (not yet implemented)
-- Motor mixing and actuator saturation in the closed loop (in progress)
 - State estimation, compared fairly: a nominal EKF, an augmented-state EKF
   (bias/disturbance states included), and a physics-informed residual estimator,
   evaluated against each other under identical conditions — no baseline will be
   deliberately weakened to make another one look better
-- Disturbance & sensor models: IMU bias, GPS dropout, and a simplified wind
-  disturbance model
 - Requirements-based evaluation: Monte Carlo scenario sweeps reported as
   median / 95th percentile / worst-case, tied to explicit requirements (ID,
   threshold, verification method)
