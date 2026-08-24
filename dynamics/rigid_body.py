@@ -18,19 +18,21 @@ def inertia_matrix(params: QuadrotorParams) -> np.ndarray:
     )
 
 def state_derivative(
-    state: np.ndarray, thrust: float, torque: np.ndarray, params: QuadrotorParams
+    state: np.ndarray, thrust: float, torque: np.ndarray, params: QuadrotorParams, wind_force: np.ndarray | None = None
 ) -> np.ndarray:
     """뉴턴-오일러 운동방정식.
     thrust: 총 추력 크기(N), body frame -z 방향으로 작용.
     torque: body frame 토크 벡터 [tau_x, tau_y, tau_z] (N*m).
     반환값: d(state)/dt, state와 같은 13개 벡터 레이아웃.
     """
+    if wind_force is None: wind_force = np.zeros(3)
+
     vel = state[3:6]
     q = state[6:10]
     omega = state[10:]
 
     R = quat.to_rotation_matrix(q)
-    accel_world = R@[0,0,-thrust]/params.mass+[0,0,params.gravity]
+    accel_world = R@[0,0,-thrust]/params.mass+[0,0,params.gravity]+wind_force/params.mass
 
     q_dot = quat.derivative(q, omega)
 
@@ -47,13 +49,16 @@ def state_derivative(
     return d_state
 
 def rk4_step(
-    state: np.ndarray, thrust: float, torque: np.ndarray, dt: float, params: QuadrotorParams
+    state: np.ndarray, thrust: float, torque: np.ndarray, dt: float, params: QuadrotorParams, wind_force: np.ndarray | None = None
 ) -> np.ndarray:
     """RK4로 한 스텝(dt) 적분. thrust/torque는 이 스텝 동안 일정하다고 가정."""
-    k1 = state_derivative(state, thrust, torque, params)
-    k2 = state_derivative(state + dt/2 * k1, thrust, torque, params)
-    k3 = state_derivative(state + dt/2 * k2, thrust, torque, params)
-    k4 = state_derivative(state + dt * k3, thrust, torque, params)
+    if wind_force is None:
+        wind_force = np.zeros(3)
+
+    k1 = state_derivative(state, thrust, torque, params, wind_force)
+    k2 = state_derivative(state + dt/2 * k1, thrust, torque, params, wind_force)
+    k3 = state_derivative(state + dt/2 * k2, thrust, torque, params, wind_force)
+    k4 = state_derivative(state + dt * k3, thrust, torque, params, wind_force)
 
     next_state = state + dt/6 * (k1 + 2*k2 + 2*k3 + k4)
 

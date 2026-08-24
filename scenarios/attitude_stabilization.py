@@ -4,6 +4,7 @@ from dynamics import rigid_body as rb
 from config.vehicle_params import DEFAULT_PARAMS
 from control.pid_attitude import AttitudeController
 from dynamics import mixing
+from scenarios.disturbances import WindDisturbance
 
 params = DEFAULT_PARAMS
 
@@ -21,6 +22,7 @@ def simulate_attitude_stabilization(
     controller=None,
     use_motor_mixing: bool = False,
     gyroscope = None,
+    wind: WindDisturbance = None
 ) -> dict:
     """자세 안정화 폐루프 시뮬레이션.(정지 상태, 자세만 기울어져 있는 초기 조건)
 
@@ -36,6 +38,8 @@ def simulate_attitude_stabilization(
     state_history = []
 
     for i in range(int(duration/dt)):
+        wind_force = wind.force(dt) if wind is not None else np.zeros(3)
+
         true_omega = state_current[10:13]
         omega_for_control = gyroscope.measure(true_omega, dt) if gyroscope is not None else true_omega
         torque = ctrl.compute_torque(state_current[6:10], state_target[6:10], omega_for_control, dt)
@@ -44,7 +48,7 @@ def simulate_attitude_stabilization(
         if use_motor_mixing:
             thrust, torque = apply_motor_mixing(thrust, torque, params)
 
-        state_current = rb.rk4_step(state_current, thrust, torque, dt, params)
+        state_current = rb.rk4_step(state_current, thrust, torque, dt, params, wind_force)
         time_history.append(i*dt)
         state_history.append(state_current)
 
