@@ -127,3 +127,51 @@ def test_rk4_free_fall_velocity_and_position_matches_analytic():
 
     assert np.isclose(state[5], params.gravity * 1)
     assert np.isclose(state[2], 0.5*params.gravity*1)
+
+def test_wind_force_adds_to_hover_acceleration():
+    state = np.zeros(13)
+    state[6] = 1.0  # 항등 쿼터니언
+
+    d_state = rb.state_derivative(
+        state,
+        thrust=params.mass * params.gravity,
+        torque=np.zeros(3),
+        params=params,
+        wind_force=np.array([2.0, 0.0, 0.0]),
+    )
+
+    assert np.allclose(d_state[3:6], [2.0 / params.mass, 0, 0])
+
+def test_zero_wind_force_matches_default():
+    state = np.zeros(13)
+    state[6] = 1.0
+    state[10:13] = [1.0, 2.0, -1.5]
+
+    d_default = rb.state_derivative(state, thrust=5.0, torque=np.zeros(3), params=params)
+    d_explicit_zero = rb.state_derivative(
+        state, thrust=5.0, torque=np.zeros(3), params=params, wind_force=np.zeros(3)
+    )
+    assert np.array_equal(d_default, d_explicit_zero)
+
+def test_rk4_constant_wind_matches_analytic_kinematics():
+    """추력이 중력을 정확히 상쇄하는 호버 상태에서, 일정한 수평 바람만 남았을 때
+    등가속도 운동 공식(v=at, x=0.5at^2)과 일치해야 한다."""
+    state = np.zeros(13)
+    state[6] = 1.0
+
+    wind_force = np.array([1.0, 0.0, 0.0])
+    hover_thrust = params.mass * params.gravity
+    expected_accel = wind_force[0] / params.mass
+
+    for _ in range(1000):
+        state = rb.rk4_step(
+            state,
+            thrust=hover_thrust,
+            torque=np.zeros(3),
+            dt=0.001,
+            params=params,
+            wind_force=wind_force,
+        )
+
+    assert np.isclose(state[3], expected_accel * 1)
+    assert np.isclose(state[0], 0.5 * expected_accel * 1)

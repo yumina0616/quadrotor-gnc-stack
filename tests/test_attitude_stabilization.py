@@ -8,6 +8,7 @@ from scenarios.attitude_stabilization import (
 from control.pid_attitude import attitude_error
 from dynamics import quaternion as quat
 from scenarios.sensor_models import Gyroscope
+from scenarios.disturbances import WindDisturbance
 
 def test_attitude_converges_within_duration():
     initial = (np.radians(20), np.radians(-15), np.radians(30))
@@ -92,3 +93,53 @@ def test_gyroscope_reproducible_with_same_seed():
         gyroscope=Gyroscope(0.01, 0.001, rng=np.random.default_rng(7)),
     )
     assert np.array_equal(result_a["states"], result_b["states"])
+
+def test_zero_wind_matches_ideal_case():
+    initial = (np.radians(20), np.radians(-15), np.radians(30))
+    result_ideal = simulate_attitude_stabilization(initial, duration=3.0, dt=0.01)
+    result_wind = simulate_attitude_stabilization(
+        initial, duration=3.0, dt=0.01,
+        wind=WindDisturbance(steady_force=np.zeros(3), gust_std=0.0),
+    )
+    assert np.allclose(result_ideal["states"], result_wind["states"])
+
+def test_wind_quaternion_stays_valid():
+    initial = (np.radians(20), np.radians(-15), np.radians(30))
+    wind = WindDisturbance(steady_force=np.array([0.5, 0, 0]), gust_std=0.1, rng=np.random.default_rng(1))
+    result = simulate_attitude_stabilization(initial, duration=3.0, dt=0.01, wind=wind)
+    q_result = [s[6:10] for s in result["states"]]
+    norms = np.linalg.norm(q_result, axis=1)
+    assert np.allclose(norms, 1.0, atol=1e-6)
+
+def test_wind_reproducible_with_same_seed():
+    initial = (np.radians(20), np.radians(-15), np.radians(30))
+    result_a = simulate_attitude_stabilization(
+        initial, duration=1.0, dt=0.01,
+        wind=WindDisturbance(np.array([0.5, 0, 0]), 0.1, rng=np.random.default_rng(7)),
+    )
+    result_b = simulate_attitude_stabilization(
+        initial, duration=1.0, dt=0.01,
+        wind=WindDisturbance(np.array([0.5, 0, 0]), 0.1, rng=np.random.default_rng(7)),
+    )
+    assert np.array_equal(result_a["states"], result_b["states"])
+
+def test_attitude_still_converges_with_wind():
+    """자세 방정식은 위치/속도/바람과 결합되지 않으므로, 바람이 있어도 자세 수렴은 그대로여야 한다."""
+    initial = (np.radians(20), np.radians(-15), np.radians(30))
+    wind = WindDisturbance(steady_force=np.array([0.5, 0, 0]), gust_std=0.1, rng=np.random.default_rng(3))
+    result = simulate_attitude_stabilization(initial, duration=3.0, dt=0.01, wind=wind)
+    q_final = result["states"][-1][6:10]
+    q_target = np.array([1.0, 0, 0, 0])
+    err = attitude_error(q_final, q_target)
+    assert np.linalg.norm(err) < np.radians(1.0)
+
+def test_steady_wind_causes_position_drift():
+    initial = (0.0, 0.0, 0.0)
+    result_ideal = simulate_attitude_stabilization(initial, duration=1.0, dt=0.01)
+    result_wind = simulate_attitude_stabilization(
+        initial, duration=1.0, dt=0.01,
+        wind=WindDisturbance(steady_force=np.array([1.0, 0, 0]), gust_std=0.0),
+    )
+    pos_ideal_final = result_ideal["states"][-1][0:3]
+    pos_wind_final = result_wind["states"][-1][0:3]
+    assert not np.allclose(pos_ideal_final, pos_wind_final)
