@@ -1,11 +1,18 @@
 import numpy as np
 
 
-def true_specific_force(thrust: float, params, wind_force: np.ndarray | None = None) -> np.ndarray:
+def true_specific_force(
+    thrust: float,
+    params,
+    wind_force: np.ndarray | None = None,
+    R_body_to_world: np.ndarray | None = None
+    ) -> np.ndarray:
     """body frame에서 본 specific force"""
     if wind_force is None:
         wind_force = np.zeros(3)
-    return np.array([0, 0, -thrust/params.mass] + wind_force/params.mass)
+    if R_body_to_world is None:
+        R_body_to_world = np.eye(3)
+    return np.array([0, 0, -thrust/params.mass] + R_body_to_world.T @ wind_force/params.mass)
 
 class Gyroscope:
     """ 자이로스코프 측정 모델: 실제 각속도 + bias + 노이즈 가 섞인 측정값.

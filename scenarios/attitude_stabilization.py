@@ -5,6 +5,8 @@ from config.vehicle_params import DEFAULT_PARAMS
 from control.pid_attitude import AttitudeController
 from dynamics import mixing
 from scenarios.disturbances import WindDisturbance
+from scenarios.sensor_models import true_specific_force
+
 
 params = DEFAULT_PARAMS
 
@@ -22,7 +24,11 @@ def simulate_attitude_stabilization(
     controller=None,
     use_motor_mixing: bool = False,
     gyroscope = None,
-    wind: WindDisturbance = None
+    wind: WindDisturbance = None,
+    accelerometer = None,
+    gps = None,
+    nominal_ekf = None,
+    augmented_ekf = None,
 ) -> dict:
     """자세 안정화 폐루프 시뮬레이션.(정지 상태, 자세만 기울어져 있는 초기 조건)
 
@@ -36,6 +42,8 @@ def simulate_attitude_stabilization(
 
     time_history = []
     state_history = []
+    nominal_ekf_history = []
+    augmented_ekf_history = []
 
     for i in range(int(duration/dt)):
         wind_force = wind.force(dt) if wind is not None else np.zeros(3)
@@ -49,12 +57,37 @@ def simulate_attitude_stabilization(
             thrust, torque = apply_motor_mixing(thrust, torque, params)
 
         state_current = rb.rk4_step(state_current, thrust, torque, dt, params, wind_force)
+
+
+        R = quat.to_rotation_matrix(state_current[6:10])
+
+        sf_true = true_specific_force(thrust, params, wind_force, R)
+
+        if accelerometer is not None:
+            accel_measured = accelerometer.measure(sf_true, dt)
+            if nominal_ekf is not None:
+                nominal_ekf.predict(accel_measured, R, dt, params.gravity)
+            if augmented_ekf is not None:
+                augmented_ekf.predict(accel_measured, R, dt, params.gravity)
+        if gps is not None:
+            gps_measurement = gps.measure(state_current[0:3])
+            if nominal_ekf is not None:
+                nominal_ekf.update(gps_measurement)
+            if augmented_ekf is not None:
+                augmented_ekf.update(gps_measurement)
+
+        if nominal_ekf is not None:
+            nominal_ekf_history.append(nominal_ekf.x.copy())
+        if augmented_ekf is not None:
+            augmented_ekf_history.append(augmented_ekf.x.copy())
         time_history.append(i*dt)
         state_history.append(state_current)
 
     return {
         "time": time_history,
         "states": state_history,
+        "nominal_ekf_x": nominal_ekf_history,
+        "augmented_ekf_x": augmented_ekf_history,
     }
 
     

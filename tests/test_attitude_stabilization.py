@@ -7,8 +7,10 @@ from scenarios.attitude_stabilization import (
 )
 from control.pid_attitude import attitude_error
 from dynamics import quaternion as quat
-from scenarios.sensor_models import Gyroscope
+from scenarios.sensor_models import Gyroscope, Accelerometer, GPS
 from scenarios.disturbances import WindDisturbance
+from estimation.nominal_ekf import NominalEKF
+from estimation.augmented_ekf import AugmentedEKF
 
 def test_attitude_converges_within_duration():
     initial = (np.radians(20), np.radians(-15), np.radians(30))
@@ -143,3 +145,63 @@ def test_steady_wind_causes_position_drift():
     pos_ideal_final = result_ideal["states"][-1][0:3]
     pos_wind_final = result_wind["states"][-1][0:3]
     assert not np.allclose(pos_ideal_final, pos_wind_final)
+
+def make_nominal_ekf():
+    return NominalEKF(
+        x0=np.zeros(6),
+        P0=np.diag([1.0] * 3 + [0.5] * 3),
+        process_noise_std=np.array([0.01] * 3 + [0.1] * 3),
+        measurement_noise_std=np.array([2.0, 2.0, 2.0]),
+    )
+
+def make_augmented_ekf():
+    return AugmentedEKF(
+        x0=np.zeros(9),
+        P0=np.diag([1.0] * 3 + [0.5] * 3 + [0.05] * 3),
+        process_noise_std=np.array([0.01] * 3 + [0.1] * 3 + [0.001] * 3),
+        measurement_noise_std=np.array([2.0, 2.0, 2.0]),
+    )
+
+def test_no_filters_returns_empty_ekf_histories():
+    """필터를 안 넘기면 nominal_ekf_x/augmented_ekf_x는 빈 리스트여야 하고,
+    time/states는 필터 유무와 무관하게 매 스텝 채워져야 한다."""
+    initial = (0.0, 0.0, 0.0)
+    result = simulate_attitude_stabilization(initial, duration=0.03, dt=0.01)
+    assert result["nominal_ekf_x"] == []
+    assert result["augmented_ekf_x"] == []
+    assert len(result["time"]) == 3
+    assert len(result["states"]) == 3
+
+def test_ekf_history_recorded_every_step_even_without_gps():
+    """GPS 없이 가속도계+필터만 있어도, predict만으로 매 스텝 이력이 기록돼야 한다."""
+    initial = (0.0, 0.0, 0.0)
+    accel = Accelerometer(noise_std=0.0, bias_random_walk_std=0.0, rng=np.random.default_rng(1))
+    nekf = make_nominal_ekf()
+    aekf = make_augmented_ekf()
+    result = simulate_attitude_stabilization(
+        initial, duration=0.05, dt=0.01,
+        accelerometer=accel, nominal_ekf=nekf, augmented_ekf=aekf,
+    )
+    assert len(result["nominal_ekf_x"]) == len(result["states"])
+    assert len(result["augmented_ekf_x"]) == len(result["states"])
+
+def test_nominal_ekf_unchanged_without_accelerometer():
+    """accelerometer가 없으면 predict()가 한 번도 안 불려서, 필터는 초기값에 머물러야 한다."""
+    initial = (0.0, 0.0, 0.0)
+    nekf = make_nominal_ekf()
+    result = simulate_attitude_stabilization(initial, duration=0.05, dt=0.01, nominal_ekf=nekf)
+    for x in result["nominal_ekf_x"]:
+        assert np.array_equal(x, np.zeros(6))
+
+def test_full_ekf_pipeline_runs_without_error_and_matches_state_length():
+    initial = (0.0, 0.0, 0.0)
+    accel = Accelerometer(noise_std=0.02, bias_random_walk_std=0.002, rng=np.random.default_rng(2))
+    gps = GPS(noise_std=1.0, dropout_prob=0.1, rng=np.random.default_rng(3))
+    nekf = make_nominal_ekf()
+    aekf = make_augmented_ekf()
+    result = simulate_attitude_stabilization(
+        initial, duration=0.2, dt=0.01,
+        accelerometer=accel, gps=gps, nominal_ekf=nekf, augmented_ekf=aekf,
+    )
+    assert len(result["nominal_ekf_x"]) == len(result["states"])
+    assert len(result["augmented_ekf_x"]) == len(result["states"])

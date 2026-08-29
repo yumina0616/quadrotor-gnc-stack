@@ -62,6 +62,21 @@ def test_true_specific_force_scales_with_thrust():
     f = true_specific_force(thrust, params)
     assert np.allclose(f, [0, 0, -thrust / params.mass])
 
+def test_true_specific_force_wind_default_rotation_is_identity():
+    thrust = params.mass * params.gravity
+    wind = np.array([2.0, -1.0, 0.5])
+    f_default = true_specific_force(thrust, params, wind)
+    f_explicit_identity = true_specific_force(thrust, params, wind, np.eye(3))
+    assert np.array_equal(f_default, f_explicit_identity)
+
+def test_true_specific_force_rotates_wind_into_body_frame():
+    """world frame 바람은 R_body_to_world의 전치(world->body)로 회전한 뒤 더해져야 한다."""
+    wind_world = np.array([1.0, 0.0, 0.0])
+    R = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]])  # z축 기준 90도 회전
+    f = true_specific_force(0.0, params, wind_world, R)
+    expected_wind_body = R.T @ wind_world
+    assert np.allclose(f, expected_wind_body / params.mass)
+
 def test_accelerometer_measure_reproducible_with_same_seed():
     f_true = true_specific_force(params.mass * params.gravity, params)
     a1 = Accelerometer(noise_std=0.05, bias_random_walk_std=0.005, rng=np.random.default_rng(1))
