@@ -100,6 +100,14 @@ def test_accelerometer_bias_stays_zero_without_random_walk():
         a.measure(f_true, thrust = 0.5, dt=0.01)
     assert np.array_equal(a.bias, np.zeros(3))
 
+def test_accelerometer_zero_vibration_coefficient_ignores_thrust():
+    f_true = true_specific_force(params.mass * params.gravity, params)
+    a1 = Accelerometer(noise_std=0.0, bias_random_walk_std=0.0, rng=np.random.default_rng(5))
+    a2 = Accelerometer(noise_std=0.0, bias_random_walk_std=0.0, rng=np.random.default_rng(5))
+    m1 = a1.measure(f_true, thrust=0.0, dt=0.01)
+    m2 = a2.measure(f_true, thrust=100.0, dt=0.01)
+    assert np.array_equal(m1, m2)
+
 def test_gps_measure_reproducible_with_same_seed():
     true_position = np.array([10.0, -5.0, 2.0])
     g1 = GPS(noise_std=0.5, dropout_prob=0.0, rng=np.random.default_rng(1))
