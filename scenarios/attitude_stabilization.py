@@ -64,7 +64,7 @@ def simulate_attitude_stabilization(
         sf_true = true_specific_force(thrust, params, wind_force, R)
 
         if accelerometer is not None:
-            accel_measured = accelerometer.measure(sf_true, dt)
+            accel_measured = accelerometer.measure(sf_true, thrust, dt)
             if nominal_ekf is not None:
                 nominal_ekf.predict(accel_measured, R, dt, params.gravity)
             if augmented_ekf is not None:

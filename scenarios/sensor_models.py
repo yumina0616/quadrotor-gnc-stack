@@ -47,18 +47,21 @@ class Accelerometer:
         self,
         noise_std: float,
         bias_random_walk_std: float,
+        vibration_coefficient: float = 0.0,
         rng: np.random.Generator | None = None,
     ):
         self.noise_std = noise_std
         self.bias_random_walk_std = bias_random_walk_std
         self.bias = np.zeros(3)
+        self.vibration_coefficient = vibration_coefficient
         self.rng = rng if rng is not None else np.random.default_rng()
 
-    def measure(self, true_specific_force: np.ndarray, dt: float) -> np.ndarray:
+    def measure(self, true_specific_force: np.ndarray, thrust: float, dt: float) -> np.ndarray:
         self.bias += self.rng.normal(0, self.bias_random_walk_std * np.sqrt(dt), size = 3)
+        vibration_bias = np.array([0.0, 0.0, self.vibration_coefficient * thrust])
         noise = self.rng.normal(0, self.noise_std, size = 3)
 
-        return true_specific_force + self.bias + noise
+        return true_specific_force + self.bias + vibration_bias + noise
 
 class GPS:
     """GPS 위치 측정 모델: 진짜 위치 -> 노이즈 포함된 측정값, 또는 dropout일 때 None."""
